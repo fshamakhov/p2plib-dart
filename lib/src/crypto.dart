@@ -3,6 +3,7 @@ import 'dart:async';
 import 'dart:isolate';
 import 'dart:ffi';
 import 'dart:io';
+import 'package:p2plib/p2plib.dart';
 import 'package:sodium/sodium.dart';
 
 class KeyPairData {
@@ -271,6 +272,11 @@ class OpenSignMsg {
 
 /// workaround from flutter_sodium
 DynamicLibrary _load() {
+  final path = String.fromEnvironment('LIBSODIUM_PATH');
+  if (path != '') {
+    log('Using LIBSODIUM_PATH: $path');
+    return DynamicLibrary.open(path);
+  }
   if (Platform.isAndroid) {
     return DynamicLibrary.open('libsodium.so');
   }
