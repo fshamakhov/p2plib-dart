@@ -3,26 +3,26 @@ import 'dart:io';
 import 'dart:isolate';
 import 'package:p2plib/p2plib.dart';
 
-const int boostrapServerPort = 4349;
+const int bootstrapServerPort = 4349;
 
 Future<void> server(SendPort p) async {
   final crypto = P2PCrypto();
   await crypto.init();
 
   final server = BootstrapServer(
-      keyPair: await crypto.signKeyPair(), port: boostrapServerPort);
+      keyPair: await crypto.signKeyPair(), port: bootstrapServerPort);
   await server.run();
   return Future.value();
 }
 
-void runServer() async {
+Future<void> runServer() async {
   final p = ReceivePort();
   await Isolate.spawn(server, p.sendPort);
 }
 
 main(List<String> arguments) async {
   Settings.bootstrapRegistrationTimeout = const Duration(seconds: 5);
-  runServer();
+  await runServer();
 
   final crypto = P2PCrypto();
   await crypto.init();
@@ -30,16 +30,16 @@ main(List<String> arguments) async {
   final encryptionKeyPair = await P2PCrypto().encryptionKeyPair();
   final signKeyPair = await P2PCrypto().signKeyPair();
 
-  final router = Router(UdpConnection(ipv4Port: 4141),
+  final router = Router(UdpConnection(ipv4Port: 4141, ipv6Port: 7345),
       encryptionKeyPair: encryptionKeyPair,
       signKeyPair: signKeyPair,
       bootstrapServerAddress:
           // In this case, the client tries to connect to the
           // bootstrap server running locally.
-          Peer(InternetAddress("127.0.0.1"), boostrapServerPort),
-      bootstrapServerAddressIpv6: Peer(
-          InternetAddress("::1"), boostrapServerPort));
-  router.run();
+          Peer(InternetAddress("127.0.0.1"), bootstrapServerPort),
+      bootstrapServerAddressIpv6:
+          Peer(InternetAddress("::1"), bootstrapServerPort));
+  await router.run();
 
   await router.bootstrapServerFinder!
       .registerMe(timeout: const Duration(seconds: 4));
@@ -50,7 +50,7 @@ main(List<String> arguments) async {
   print("Lets check my ips: $peers");
 
   await Future.delayed(const Duration(seconds: 5));
-  final fake = Peer(InternetAddress("192.168.0.1"), boostrapServerPort);
+  final fake = Peer(InternetAddress("192.168.0.1"), bootstrapServerPort);
   print("set fake bootstrap");
   router.setBootstrapServer(fake, null);
   await Future.delayed(const Duration(seconds: 10));
